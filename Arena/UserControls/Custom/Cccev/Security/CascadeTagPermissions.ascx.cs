@@ -6,10 +6,13 @@
 * Date Created:	8/28/2008 5:22:20 PM
 *
 * $Workfile: CascadeTagPermissions.ascx.cs $
-* $Revision: 4 $ 
-* $Header: /trunk/Arena/UserControls/Custom/Cccev/Security/CascadeTagPermissions.ascx.cs   4   2010-06-09 12:44:20-07:00   nicka $
+* $Revision: 5 $ 
+* $Header: /trunk/Arena/UserControls/Custom/Cccev/Security/CascadeTagPermissions.ascx.cs   5   2011-10-18 15:12:24-07:00   nicka $
 * 
 * $Log: /trunk/Arena/UserControls/Custom/Cccev/Security/CascadeTagPermissions.ascx.cs $
+*  
+*  Revision: 5   Date: 2011-10-18 22:12:24Z   User: nicka 
+*  Adding message for Metric cascading since it's not ready yet. 
 *  
 *  Revision: 4   Date: 2010-06-09 19:44:20Z   User: nicka 
 *  Semi working version of new "groups" and "metrics" cascading.  Needs more 
