@@ -13,7 +13,7 @@ class CentralAZ.Media.VideoCollection extends Backbone.Collection
 
 class CentralAZ.Media.IndexView extends Backbone.View
 	constructor: ->
-		@el = "#centralaz-vimeo-main"
+		@setElement('#centralaz-vimeo-main')
 		@indexTemplate = '''
 						{{#videos}}
 						<li id="{{htmlID}}">
@@ -28,7 +28,7 @@ class CentralAZ.Media.IndexView extends Backbone.View
 		# VideoCollection:
 		@model = options.videos
 	render: ->
-		$main = $(@el)
+		$main = @$el
 		jsonData = videos: @model.toJSON()
 
 		$main.fadeOut "fast", =>
@@ -41,7 +41,7 @@ class CentralAZ.Media.IndexView extends Backbone.View
 
 class CentralAZ.Media.MessageView extends Backbone.View
 	constructor: ->
-		@el = "#centralaz-vimeo-main"
+		@setElement('#centralaz-vimeo-main')
 		@itemTemplate = '''
 						<div class="centralaz-vimeo-player">
 						<h1>{{title}}</h1>
@@ -56,7 +56,7 @@ class CentralAZ.Media.MessageView extends Backbone.View
 		@videoEmbed = options.videoEmbed
 		@model = options.model
 	render: ->
-		$main = $(@el)
+		$main = @$el
 
 		$main.fadeOut "fast", =>
 			$main.empty()
@@ -67,16 +67,15 @@ class CentralAZ.Media.MessageView extends Backbone.View
 class CentralAZ.Media.MediaApp extends Backbone.Router
 	routes: 
 		"": "index" 
-		"/home": "index"
-		"/message/:id": "message"
-		"/latest": "latest"
+		"!/home": "index"
+		"!/message/:id": "message"
+		"!/latest": "latest"
 	initialize: (options) ->
 		@message = null
 		@currentVideo = null
 		# VideoCollection:
 		@videos = options.collection
 		@index = new CentralAZ.Media.IndexView( videos: @videos )
-		Backbone.history.loadUrl()
 	index: ->
 		@index.render()
 	message: (id) ->
@@ -93,6 +92,4 @@ class CentralAZ.Media.Runner
 	init: ->
 		$.getJSON "http://vimeo.com/api/v2/"+@accountID+"/videos.json?callback=?", (data) ->
 			window.mediaApp = new CentralAZ.Media.MediaApp (collection: new CentralAZ.Media.VideoCollection(data) )
-			try
-				Backbone.history.start()
-			catch error
+			Backbone.history.start()

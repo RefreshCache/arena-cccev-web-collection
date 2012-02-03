@@ -13,7 +13,7 @@ class CentralAZ.Facebook.Views.Connected extends Backbone.View
 		@ev = options.events
 		@model = options.model
 	render: ->
-		$el = $(@el)
+		$el = @$el
 		$el.prependTo 'body'
 		jsonData = @model.toJSON()
 		renderedHtml = Mustache.to_html( @template, jsonData)

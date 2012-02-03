@@ -1,6 +1,6 @@
 class CentralAZ.Facebook.Views.FacebookSignUp extends Backbone.View
 	constructor: ->
-		@el = '#signup-form'
+		@setElement('#signup-form')
 		@template = '''
 					<h3>Hi {{name}}</h3>
 					<img src='https://graph.facebook.com/{{id}}/picture?type=square' class="imageSmall" height="50" width="50" alt={{name}} />
@@ -22,8 +22,8 @@ class CentralAZ.Facebook.Views.FacebookSignUp extends Backbone.View
 		$("input[id$='ihAccessToken']").val CentralAZ.Facebook.Helpers.Authentication.config.accessToken
 		$('.im-new, .have-account').next('div').hide()
 		$that = @
-		$(@el).siblings().fadeOut 'slow', ->
-			$($that.el).fadeIn('slow')
+		@$el.siblings().fadeOut 'slow', ->
+			$that.$el.fadeIn('slow')
 			false
 	events:
 		'click .fblogout': 'logOut'
@@ -43,6 +43,6 @@ class CentralAZ.Facebook.Views.FacebookSignUp extends Backbone.View
 	unbind: ->
 		# Unbind events dynamically bound by Backbone. If the elements in quesiton do not share
 		# the same lifecycle as the parent View object, events will be bound more than once.
-		$(@el).undelegate '.fb-logout', 'click'
-		$(@el).undelegate '.im-new', 'click'
-		$(@el).undelegate '.have-account', 'click'
+		@$el.undelegate '.fb-logout', 'click'
+		@$el.undelegate '.im-new', 'click'
+		@$el.undelegate '.have-account', 'click'
