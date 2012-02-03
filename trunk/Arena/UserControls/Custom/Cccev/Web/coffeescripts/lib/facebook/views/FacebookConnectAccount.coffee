@@ -18,7 +18,7 @@ class CentralAZ.Facebook.Views.FacebookConnectAccount extends Backbone.View
 		_.bindAll(@)
 		@ev.bind 'optOutSuccessful', @onOptedOut
 	render: ->
-		$el = $(@el)
+		$el = @$el
 		$el.prependTo 'body'
 		renderedHtml = Mustache.to_html(@template, @model.toJSON())
 		$el.html(renderedHtml)

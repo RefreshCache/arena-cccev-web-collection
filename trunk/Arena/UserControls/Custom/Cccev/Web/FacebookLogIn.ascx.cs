@@ -4,10 +4,15 @@
 * Date Created: 8/29/2011
 *
 * $Workfile: FacebookLogIn.ascx.cs $
-* $Revision: 12 $
-* $Header: /trunk/Arena/UserControls/Custom/Cccev/Web/FacebookLogIn.ascx.cs   12   2011-12-05 12:04:14-07:00   nicka $
+* $Revision: 13 $
+* $Header: /trunk/Arena/UserControls/Custom/Cccev/Web/FacebookLogIn.ascx.cs   13   2012-01-11 15:57:20-07:00   JasonO $
 *
 * $Log: /trunk/Arena/UserControls/Custom/Cccev/Web/FacebookLogIn.ascx.cs $
+*  
+*  Revision: 13   Date: 2012-01-11 22:57:20Z   User: JasonO 
+*  Fixing bug that was being caused when people registered via Facebook. They 
+*  were being created without a Family record, so when they tried registering 
+*  for an event, they weren't able to. 
 *  
 *  Revision: 12   Date: 2011-12-05 19:04:14Z   User: nicka 
 *  Added "requestUrl" to the GetRedirectPath to resolve bug whereby users are 
@@ -161,10 +166,24 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Web
             {
                 var facebookUser = GetFacebookUser();
                 var id = facebookUser["id"].ToString();
-                
+
                 string password = string.Empty;
                 var person = PopulatePerson(facebookUser, CREATED_BY);
                 person.Save(CurrentOrganization.OrganizationID, CREATED_BY, true);
+
+                // Thanks again Arena!
+                var family = new Family
+                                 {
+                                     OrganizationID = CurrentOrganization.OrganizationID,
+                                     FamilyName = string.Format("{0} Family", person.LastName)
+                                 };
+                family.Save(CREATED_BY);
+                var familyMember = new FamilyMember(family.FamilyID, person.PersonID)
+                                       {
+                                           FamilyID = family.FamilyID,
+                                           FamilyRole = new Lookup(SystemLookup.FamilyRole_Adult)
+                                       };
+                familyMember.Save(CREATED_BY);
 
                 // Thanks Arena!
                 var trash = person.Logins;
@@ -176,7 +195,7 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Web
                 Response.Cookies["portalroles"].Value = string.Empty;
                 Redirect();
             }
-            catch (FacebookApiException ex)
+            catch (System.Exception ex)
             {
                 new ExceptionHistoryData().AddUpdate_Exception(ex, CurrentOrganization.OrganizationID,
                     "Cccev.Web", ArenaContext.Current.ServerUrl);

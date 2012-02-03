@@ -1,6 +1,6 @@
 class CentralAZ.Facebook.Views.FacebookLogin extends Backbone.View
 	constructor: ->
-		@el = '#log-in'
+		@setElement('#log-in')
 		@unbind()
 		super
 	initialize: (options) ->
@@ -18,4 +18,4 @@ class CentralAZ.Facebook.Views.FacebookLogin extends Backbone.View
 	unbind: -> 
 		# Unbind events dynamically bound by Backbone. If the elements in quesiton do not share
 		# the same lifecycle as the parent View object, events will be bound more than once.
-		$(@el).undelegate '.facebook-login', 'click'
+		@$el.undelegate '.facebook-login', 'click'
