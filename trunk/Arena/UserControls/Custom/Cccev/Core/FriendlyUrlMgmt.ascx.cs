@@ -4,10 +4,17 @@
 * Date Created:  8/10/2011 12:59:00  PM
 *
 * $Workfile: FriendlyUrlMgmt.ascx.cs $
-* $Revision: 18 $ 
-* $Header: /trunk/Arena/UserControls/Custom/Cccev/Core/FriendlyUrlMgmt.ascx.cs   18   2011-08-26 13:03:04-07:00   derekm $
+* $Revision: 20 $ 
+* $Header: /trunk/Arena/UserControls/Custom/Cccev/Core/FriendlyUrlMgmt.ascx.cs   20   2012-03-01 12:30:26-07:00   derekm $
 * 
 * $Log: /trunk/Arena/UserControls/Custom/Cccev/Core/FriendlyUrlMgmt.ascx.cs $
+*  
+*  Revision: 20   Date: 2012-03-01 19:30:26Z   User: derekm 
+*  Cleaned up the caching code a bit 
+*  
+*  Revision: 19   Date: 2012-03-01 05:03:54Z   User: derekm 
+*  Added caching to the 'dtFriendlyURLS' object. Please review, Nick or Jason. 
+*  Thanks. 
 *  
 *  Revision: 18   Date: 2011-08-26 20:03:04Z   User: derekm 
 *  Cleaned up (column widths, etc.) 
@@ -219,7 +226,6 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Core
 		private void ClearForm()
 		{
 			ddlFriendlyUrls.SelectedValue = "new";
-
 			FriendlyUrlName.Text = string.Empty;
 			RedirectDestination.Text = string.Empty;
 			ExactDestination.Checked = true;
@@ -250,53 +256,60 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Core
 
 		private DataTable GetVirtualDirectories()
 		{
+			DataTable dtFriendlyURLS;
 
-			ServerManager serverManager = new ServerManager();
-
-			Application app = serverManager.Sites[IisWebsiteNameSetting].Applications["/"];
-
-			DataTable dtFriendlyURLS = new DataTable();
-			dtFriendlyURLS.Columns.Add(new DataColumn("FriendlyURL", typeof(System.String)));
-			dtFriendlyURLS.Columns.Add(new DataColumn("Destination", typeof(System.String)));
-			dtFriendlyURLS.Columns.Add(new DataColumn("ExactDestination", typeof(System.Boolean)));
-			dtFriendlyURLS.Columns.Add(new DataColumn("ChildOnly", typeof(System.Boolean)));
-			dtFriendlyURLS.Columns.Add(new DataColumn("HttpResponseStatus", typeof(System.String)));
-			dtFriendlyURLS.Columns.Add(new DataColumn("QRCode", typeof(System.String)));
-
-
-			var vDs = (from vDir in app.VirtualDirectories
-					   where vDir.Path != "/"
-					   orderby vDir.Path
-					   select vDir);
-
-
-			foreach (VirtualDirectory vD in vDs)
+			if (Cache["dtFriendlyURLS"] == null)
 			{
-				Configuration config = serverManager.GetWebConfiguration(IisWebsiteNameSetting + vD.Path);
-				ConfigurationSection httpRedirectSection = config.GetSection("system.webServer/httpRedirect");
+				ServerManager serverManager = new ServerManager();
+				Application app = serverManager.Sites[IisWebsiteNameSetting].Applications["/"];
 
-				DataRow dRow = dtFriendlyURLS.NewRow();
-				char[] charsToTrim = { '/' };
-				dRow["FriendlyURL"] = vD.Path.ToString().Trim(charsToTrim);
-				dRow["Destination"] = httpRedirectSection["destination"].ToString();
-				dRow["ExactDestination"] = (bool)httpRedirectSection["exactDestination"];
-				dRow["ChildOnly"] = (bool)httpRedirectSection["childOnly"];
-				switch (httpRedirectSection["httpResponseStatus"].ToString())
+				dtFriendlyURLS = new DataTable();
+				dtFriendlyURLS.Columns.Add(new DataColumn("FriendlyURL", typeof(System.String)));
+				dtFriendlyURLS.Columns.Add(new DataColumn("Destination", typeof(System.String)));
+				dtFriendlyURLS.Columns.Add(new DataColumn("ExactDestination", typeof(System.Boolean)));
+				dtFriendlyURLS.Columns.Add(new DataColumn("ChildOnly", typeof(System.Boolean)));
+				dtFriendlyURLS.Columns.Add(new DataColumn("HttpResponseStatus", typeof(System.String)));
+				dtFriendlyURLS.Columns.Add(new DataColumn("QRCode", typeof(System.String)));
+
+				var vDs = (from vDir in app.VirtualDirectories
+						   where vDir.Path != "/"
+						   orderby vDir.Path
+						   select vDir);
+
+				foreach (VirtualDirectory vD in vDs)
 				{
-					case "301":
-						dRow["HttpResponseStatus"] = "Permanent";
-						break;
-					case "302":
-						dRow["HttpResponseStatus"] = "Found";
-						break;
-					case "307":
-						dRow["HttpResponseStatus"] = "Temporary";
-						break;
-				}
-				string fullFriendlyURL = BaseWebUrlSetting + vD.Path;
-				dRow["QRCode"] = fullFriendlyURL;
+					Configuration config = serverManager.GetWebConfiguration(IisWebsiteNameSetting + vD.Path);
+					ConfigurationSection httpRedirectSection = config.GetSection("system.webServer/httpRedirect");
 
-				dtFriendlyURLS.Rows.Add(dRow);
+					DataRow dRow = dtFriendlyURLS.NewRow();
+					char[] charsToTrim = { '/' };
+					dRow["FriendlyURL"] = vD.Path.ToString().Trim(charsToTrim);
+					dRow["Destination"] = httpRedirectSection["destination"].ToString();
+					dRow["ExactDestination"] = (bool)httpRedirectSection["exactDestination"];
+					dRow["ChildOnly"] = (bool)httpRedirectSection["childOnly"];
+					switch (httpRedirectSection["httpResponseStatus"].ToString())
+					{
+						case "301":
+							dRow["HttpResponseStatus"] = "Permanent";
+							break;
+						case "302":
+							dRow["HttpResponseStatus"] = "Found";
+							break;
+						case "307":
+							dRow["HttpResponseStatus"] = "Temporary";
+							break;
+					}
+					string fullFriendlyURL = BaseWebUrlSetting + vD.Path;
+					dRow["QRCode"] = fullFriendlyURL;
+
+					dtFriendlyURLS.Rows.Add(dRow);
+				}
+
+				Cache.Add("dtFriendlyURLS", dtFriendlyURLS, null, DateTime.Now.AddMinutes(3), System.Web.Caching.Cache.NoSlidingExpiration, System.Web.Caching.CacheItemPriority.Default, null);
+			}
+			else
+			{
+				dtFriendlyURLS = (DataTable)Cache["dtFriendlyURLS"];
 			}
 
 			return dtFriendlyURLS;
@@ -348,7 +361,7 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Core
 		private bool DirectoryExists(string directoryToFind)
 		{
 			bool directoryFound = false;
-			string basePath = VirtualDirectoryPhysicalFolderHomeSetting;  //@"C:\inetpub\_RedirectedSites\";
+			string basePath = VirtualDirectoryPhysicalFolderHomeSetting;
 			string fullPath = basePath + directoryToFind;
 
 			foreach (string d in Directory.GetDirectories(basePath))
@@ -375,9 +388,9 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Core
 				proceed = false;
 			}
 
-			if (ddlFriendlyUrls.SelectedValue != "new" && proceed == true)
+			if ((ddlFriendlyUrls.SelectedValue != "new") && (proceed == true))
 			{
-				string basePath = VirtualDirectoryPhysicalFolderHomeSetting; // @"C:\inetpub\_RedirectedSites\";
+				string basePath = VirtualDirectoryPhysicalFolderHomeSetting;
 				string vDirPath = "/" + FriendlyUrlName.Text;
 
 				ServerManager serverManager = new ServerManager();
@@ -387,6 +400,8 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Core
 				serverManager.CommitChanges();
 
 				Directory.Delete(vDir.PhysicalPath, true);
+
+				Cache.Remove("dtFriendlyURLS");
 
 				DataTable dtVirtualDirectories = GetVirtualDirectories();
 				LoadFriendlyUrlDdl(dtVirtualDirectories);
@@ -398,8 +413,8 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Core
 			}
 			else
 			{
-				ClearForm();
 				lblProcessReport.Text = "No Friendly URL selected.";
+				ClearForm();
 			}
 		}
 
@@ -422,7 +437,7 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Core
 
 				if (newVanityUrl)
 				{
-					string basePath = VirtualDirectoryPhysicalFolderHomeSetting; // @"C:\inetpub\_RedirectedSites\";
+					string basePath = VirtualDirectoryPhysicalFolderHomeSetting;
 					string fullPath = basePath + FriendlyUrlName.Text;
 					Directory.CreateDirectory(fullPath);
 
@@ -434,12 +449,15 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Core
 
 					CreateHttpRedirectSettings(vDirPath);
 
+					Cache.Remove("dtFriendlyURLS");
+
 					dtVirtualDirectories = GetVirtualDirectories();
 					LoadFriendlyUrlDdl(dtVirtualDirectories);
 					grdVirtualDirectoryList.DataSource = dtVirtualDirectories;
 					grdVirtualDirectoryList.DataBind();
 
 					ClearForm();
+
 					lblProcessReport.Text = "Process Complete.";
 				}
 			}
@@ -453,11 +471,14 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Core
 					{
 						CreateHttpRedirectSettings(vDirPath);
 
+						Cache.Remove("dtFriendlyURLS");
+
 						dtVirtualDirectories = GetVirtualDirectories();
 						grdVirtualDirectoryList.DataSource = dtVirtualDirectories;
 						grdVirtualDirectoryList.DataBind();
 
 						ClearForm();
+
 						lblProcessReport.Text = "Process Complete.";
 					}
 					else
@@ -479,19 +500,17 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Core
 			{
 				if (divAddEditRemoveForm.Visible)
 				{
-					divAddEditRemoveForm.Visible = false;
 					btnShowHideFormDiv.Text = "Show Add/Edit Friendly URL Form";
+					divAddEditRemoveForm.Visible = false;
 				}
 				else
 				{
-					divAddEditRemoveForm.Visible = true;
+					btnShowHideFormDiv.Text = "Hide Add/Edit Friendly URL Form"; 
 					LoadFriendlyUrlDdl(GetVirtualDirectories());
 					ClearForm();
-					btnShowHideFormDiv.Text = "Hide Add/Edit Friendly URL Form";
+					divAddEditRemoveForm.Visible = true;
 				}
 			}
 		}
-
-	
 	}
 }
