@@ -4,10 +4,21 @@
 * Date Created:	3/2/2010 7:39:22 PM
 *
 * $Workfile: PromotionsViaXSLT.ascx.cs $
-* $Revision: 13 $ 
+* $Revision: 16 $ 
 * $Header: 
 * 
 * $Log: /trunk/Arena/UserControls/Custom/Cccev/Web2/PromotionsViaXSLT.ascx.cs $
+*  
+*  Revision: 16   Date: 2012-03-20 16:32:35Z   User: nicka 
+*  Added the "priority" value into the XML and also added ordering by Title 
+*  (after ordering by Index). 
+*  
+*  Revision: 15   Date: 2011-11-30 16:53:54Z   User: nicka 
+*  Added pure randomizing feature that takes precedent over other randomize 
+*  features (if set to true). 
+*  
+*  Revision: 14   Date: 2011-11-17 22:15:33Z   User: nicka 
+*  added capability to stuff static content in from module's Details 
 *  
 *  Revision: 13   Date: 2011-07-08 15:56:46Z   User: nicka 
 *  Added ability to filter by selected campus(es) and also added the 
@@ -53,6 +64,7 @@
 **********************************************************************/
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
@@ -69,55 +81,58 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Web2
 	public partial class PromotionsViaXSLT : PortalControl
 	{
 		#region Module Settings
+		[ListFromSqlSetting( "Areas (Topic Areas)", "The Topic Areas in which to show promotions", true, "",
+	"SELECT l.lookup_id, l.lookup_value FROM core_lookup l INNER JOIN core_lookup_type lt ON lt.lookup_type_id = l.lookup_type_id AND lt.guid = '1FE55E22-F67C-46BA-A6AE-35FD112AFD6D' WHERE active = 1 ORDER BY lookup_order",
+	ListSelectionMode.Multiple )]
+		public string TopicAreasSetting { get { return Setting( "TopicAreas", "", true ); } }
+
 		[CustomListSetting( "Area Filter", "Filter flag for Topic Areas.  If set to 'primary' only items whose Primary Ministry matches the Topic Area will be shown, etc.  Defaults to 'primary'.", false, "primary",
 			new[] { "primary", "secondary", "both", "home" }, new[] { "primary", "secondary", "both", "home" } )]
 		public string AreaFilterSetting { get { return Setting( "AreaFilter", "primary", false ); } }
 
-		[ListFromSqlSetting( "Topic Areas", "The Topic Areas in which to show promotions", true, "",
-			"SELECT l.lookup_id, l.lookup_value FROM core_lookup l INNER JOIN core_lookup_type lt ON lt.lookup_type_id = l.lookup_type_id AND lt.guid = '1FE55E22-F67C-46BA-A6AE-35FD112AFD6D' WHERE active = 1 ORDER BY lookup_order",
-			ListSelectionMode.Multiple )]
-		public string TopicAreasSetting { get { return Setting( "TopicAreas", "", true ); } }
-
 		[ListFromSqlSetting( "Thumbnail Document Type", "The document type containing the thumbnail to display. Use only to override the default web promotion image", false, "",
-			"SELECT document_type_id, type_name FROM core_document_type" )]
+			"SELECT document_type_id, type_name FROM core_document_type" ), Category( "Visuals & Styling" )]
 		public string ThumbnailSetting { get { return Setting( "Thumbnail", "", false ); } }
 
-		[NumericSetting( "Thumbnail Width", "The width of the thumbnail images Default 32.", false )]
+		[NumericSetting( "Thumbnail Width", "The width of the thumbnail images Default 32.", false ), Category( "Visuals & Styling" )]
 		public string WidthSetting { get { return Setting( "Width", "32", false ); } }
 
-		[NumericSetting( "Thumbnail Height", "The height of the thumbnail images. Default 32.", false )]
+		[NumericSetting( "Thumbnail Height", "The height of the thumbnail images. Default 32.", false ), Category( "Visuals & Styling" )]
 		public string HeightSetting { get { return Setting( "Height", "32", false ); } }
 
-		[NumericSetting( "Maximum Items", "The maximum items to display. Default 16.", false )]
+		[NumericSetting( "Maximum Items", "The maximum items to display. Default 16.", false ), Category( "Filtering & Randomizing" )]
 		public string MaxItemsSetting { get { return Setting( "MaxItems", "16", false ); } }
 
-		[NumericSetting( "Priority Level", "Priority level to constrain results by. Default is 99.", false )]
+		[NumericSetting( "Priority Level", "Priority level to constrain results by. Default is 99.", false ), Category( "Filtering & Randomizing" )]
 		public string PriorityLevelSetting { get { return Setting( "PriorityLevel", "99", false ); } }
 
-		[BooleanSetting( "Priority Randomized", "Flag indicating whether to randomize the order of events based on their priority (weighted). Default false.", false, false )]
+		[BooleanSetting( "Randomize", "Flag indicating whether to randomize the order of items (normally they are ordered based on their priority. This takes precedent over other Randomize settings if set to true. Default false.", false, false ), Category( "Filtering & Randomizing" )]
+		public bool RandomizedPureSetting { get { return Convert.ToBoolean( Setting( "RandomizedPure", "false", false ) ); } }
+
+		[BooleanSetting( "Randomize by Weighted Priority", "Flag indicating whether to randomize the order of items based on their priority (weighted). Default false.", false, false ), Category( "Filtering & Randomizing" )]
 		public bool RandomizedSetting { get { return Convert.ToBoolean( Setting( "Randomized", "false", false ) ); } }
 
 		[TextSetting( "js Path", "Path to the any needed .js script such as ~/Templates/Custom/blah/blah.js", false )]
 		public string ScriptPathSetting { get { return Setting( "ScriptPath", "", false ); } }
 
-		[TextSetting( "CSS Path", "Path to the any desired .css stylesheet.", false )]
+		[TextSetting( "CSS Path", "Path to the any desired .css stylesheet.", false ), Category( "Visuals & Styling" )]
 		public string CSSPathSetting { get { return Setting( "CSSPath", "", false ); } }
 
 		string _promotionDisplayPageIDSetting;
-		[SmartPageSetting( "Promotion Display Page", "The page that should be used to display the promotion summary.", "UserControls/Content/PromotionDisplayDetails.ascx", RelatedModuleLocation.Beneath )]
+		[SmartPageSetting( "Display Page (for Promotions)", "The page that should be used to display the promotion summary.", "UserControls/Content/PromotionDisplayDetails.ascx", RelatedModuleLocation.Beneath )]
 		public string PromotionDisplayPageIDSetting	{ get { return _promotionDisplayPageIDSetting; } set { _promotionDisplayPageIDSetting = value; } }
 
-		[PageSetting( "Event Detail Page", "The page that should be used to display event details. Default 4222.", false, 4222)]
+		[PageSetting( "Detail Page (for Events)", "The page that should be used to display event details. Default 4222.", false, 4222)]
 		public string EventDetailPageSetting { get { return Setting( "EventDetailPage", "4222", false ); } }
 
 		[TextSetting( "XsltUrl", "The path to the XSLT file to use. Default '~/UserControls/Custom/Cccev/Web2/xslt/simple_promotions.xslt')", false )]
 		public string XsltUrlSetting { get { return Setting( "XsltUrl", "~/UserControls/Custom/Cccev/Web2/xslt/simple_promotions.xslt", false ); } }
 
 		private string ImageEffect = string.Empty;
-		[TextSetting( "Image Effect", "The image effect to use when displaying a promotion image.  See <a href='http://community.arenachms.com/files/folders/documents/entry176.aspx'>Arena Image Documentation</a> for details. ", false )]
+		[TextSetting( "Image Effect", "The image effect to use when displaying a promotion image.  See <a href='http://community.arenachms.com/files/folders/documents/entry176.aspx'>Arena Image Documentation</a> for details. ", false ), Category( "Visuals & Styling" )]
 		public string ImageEffectSetting { get { return Setting( "ImageEffect", "", false ); } }
 
-		[TextSetting( "Image Effect Settings", "The image effect settings to use when displaying a promotion image.", false )]
+		[TextSetting( "Image Effect Settings", "The image effect settings to use when displaying a promotion image.", false ), Category( "Visuals & Styling" )]
 		public string ImageEffectDetailsSetting { get { return Setting( "ImageEffectDetails", "", false ); } }
 
 		[NumericSetting( "Time to Cache (minutes)", "Time in minutes to cache the contents.  Default 3.", false )]
@@ -126,12 +141,12 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Web2
 		[BooleanSetting( "Events Only", "Flag indicating if only promotions tied to an event should be displayed. Default false.", false, false )]
 		public bool EventsOnlySetting { get { return Convert.ToBoolean( Setting( "EventsOnly", "false", false ) ); } }
 
-		[BooleanSetting( "Use Person's Campus", "Flag indicating whether to use the authenticated person's campus value if available. Default false.", false, false )]
+		[BooleanSetting( "Use Person's Campus", "Flag indicating whether to use the authenticated person's campus value if available. Default false.", false, false ), Category( "Campus" )]
 		public bool UsePersonCampusSetting { get { return Convert.ToBoolean( Setting( "UsePersonCampus", "false", false ) ); } }
 
 		[ListFromSqlSetting( "Use Configured Campus", "If 'Use Person Campus' is set to false, choosing one or more campuses here will filter promotions to include only those that are tied to these campuses and ones that have no campus specified.", false, "",
 			"SELECT campus_id, name FROM orgn_campus ORDER BY name",
-			ListSelectionMode.Multiple )]
+			ListSelectionMode.Multiple ), Category( "Campus" )]
 		public string UseConfigCampusSetting { get { return Setting( "UseConfigCampus", "", false ); } }
 
 		#endregion
@@ -193,6 +208,15 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Web2
 				XmlNode rootNode = document.CreateNode( XmlNodeType.Element, "arenapromotions", document.NamespaceURI );
 				document.AppendChild( rootNode );
 
+				// Build the node for any static embedded content that comes from the module details (if any)
+				if ( !string.IsNullOrEmpty( CurrentModule.Details ) )
+				{
+					XmlNode staticNode = document.CreateNode( XmlNodeType.Element, "static", document.NamespaceURI );
+					rootNode.AppendChild( staticNode );
+					XmlAttribute itemAttrib = document.CreateAttribute( "tmp" );
+					SetNodeAttribute( document, staticNode, itemAttrib, "embedded", CurrentModule.Details );					
+				}
+
 				// Build the node for the channel
 				XmlNode containerNode = document.CreateNode( XmlNodeType.Element, "container", document.NamespaceURI );
 				rootNode.AppendChild( containerNode );
@@ -211,6 +235,7 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Web2
 					SetNodeAttribute( document, itemNode, itemAttrib, "details", item.WebText );
 					SetNodeAttribute( document, itemNode, itemAttrib, "imageUrl", GetImageUrl( item ) );
 					SetNodeAttribute( document, itemNode, itemAttrib, "detailsUrl", GetDetailsUrl( item ) );
+					SetNodeAttribute( document, itemNode, itemAttrib, "priority", item.Priority.ToString() );
 				}
 
 				Cache.Add( cacheKey, document, null, DateTime.Now.AddMinutes( int.Parse( TimeCacheMinutesSetting ) ), Cache.NoSlidingExpiration, CacheItemPriority.High, null );
@@ -243,8 +268,10 @@ namespace ArenaWeb.UserControls.Custom.Cccev.Web2
 							   select p ).Select( p => new
 							   {
 								   Promotion = p,
-								   Index = ( RandomizedSetting ) ? randGen.NextDouble() * p.Priority : p.Priority
-							   } ).OrderBy( p => p.Index )
+								   //Index = ( RandomizedSetting ) ? randGen.NextDouble() * p.Priority : p.Priority
+								   Index = ( RandomizedPureSetting ) ? randGen.NextDouble() :
+												( RandomizedSetting ) ? randGen.NextDouble() * p.Priority : p.Priority
+							   } ).OrderBy( p => p.Index).ThenBy( p => p.Promotion.Title )
 							  .Select( p => p.Promotion );
 
 			// filter by campuses if UseConfigCampusSetting is not empty (feature for rev 13)
