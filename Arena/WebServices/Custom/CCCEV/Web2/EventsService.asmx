@@ -6,10 +6,27 @@
 * Date Created: TBD
 *
 * $Workfile: EventsService.asmx $
-* $Revision: 12 $
-* $Header: /trunk/Arena/WebServices/Custom/CCCEV/Web2/EventsService.asmx   12   2011-04-05 15:46:09-07:00   JasonO $
+* $Revision: 17 $
+* $Header: /trunk/Arena/WebServices/Custom/CCCEV/Web2/EventsService.asmx   17   2012-01-11 11:38:54-07:00   JasonO $
 *
 * $Log: /trunk/Arena/WebServices/Custom/CCCEV/Web2/EventsService.asmx $
+* 
+* Revision: 17   Date: 2012-01-11 18:38:54Z   User: JasonO 
+* Fixing bugs in filtering out of keywords in event summary. 
+* 
+* Revision: 16   Date: 2012-01-10 23:44:25Z   User: JasonO 
+* Adding a check to look for '##' before returning event search results via 
+* JSON. 
+* 
+* Revision: 15   Date: 2011-11-15 23:32:28Z   User: JasonO 
+* Adding classes to event service to support colorizing event calendar. 
+* 
+* Revision: 14   Date: 2011-11-11 00:51:01Z   User: JasonO 
+* Adding functionality to accept multiple campuses within event calendar 
+* filter controls. 
+* 
+* Revision: 13   Date: 2011-11-11 00:12:58Z   User: JasonO 
+* Adding support for passing in multiple campus ids. 
 * 
 * Revision: 12   Date: 2011-04-05 22:46:09Z   User: JasonO 
 * Functionality updates for Glendale campus rollout and usability 
@@ -41,6 +58,7 @@
 
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Web.Script.Services;
 using System.Web.Services;
 using Arena.Custom.Cccev.DataUtils;
@@ -59,25 +77,41 @@ public class EventsService : WebService
         controller = new EventProfileController();
     }
     
+    [Obsolete]
     [WebMethod(EnableSession = true)]
     [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
     public object[] GetEventList(DateTime start, DateTime end, string keywords, string topicIDs, int campusID, int pageID)
     {
-        // Valiating to prevent any funny business
-        if (!topicIDs.IsValidIDList())
-        {
-            throw new InvalidOperationException("Hey! No funny business!");
-        }
-        
-
-        return (from e in controller.GetEventsByDateRangeAndCampus(start, end, keywords, topicIDs, campusID)
-                let cssClass = (e.Campus == null || campusID != e.Campus.CampusId) ? "all-church-event" : "event-profile"
-                select GetEventJson(e, pageID, cssClass)).ToArray();
+        return GetEventList(start, end, keywords, topicIDs, campusID.ToString(), pageID);
     }
 
     [WebMethod(EnableSession = true)]
     [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
+    public object[] GetEventList(DateTime start, DateTime end, string keywords, string topicIDs, string campusIDs, int pageID)
+    {
+        // Valiating to prevent any funny business
+        if (!topicIDs.IsValidIDList() && !campusIDs.IsValidIDList())
+        {
+            throw new InvalidOperationException("Hey! No funny business!");
+        }
+
+        int[] cids = Array.ConvertAll<string, int>(campusIDs.Split(','), Convert.ToInt32);
+        return (from e in controller.GetEventsByDateRangeAndCampus(start, end, keywords, topicIDs, cids)
+                let cssClass = GetCampusClassName(cids, e)
+                select GetEventJson(e, pageID, cssClass)).ToArray();
+    }
+
+    [Obsolete]
+    [WebMethod(EnableSession = true)]
+    [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
     public object[] GetAlphabeticalEventList(DateTime start, DateTime end, string keywords, string topicIDs, int campusID, int pageID)
+    {
+        return GetAlphabeticalEventList(start, end, keywords, topicIDs, campusID.ToString(), pageID);
+    }
+    
+    [WebMethod(EnableSession = true)]
+    [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
+    public object[] GetAlphabeticalEventList(DateTime start, DateTime end, string keywords, string topicIDs, string campusIDs, int pageID)
     {
         // Valiating to prevent any funny business
         if (!topicIDs.IsValidIDList())
@@ -85,8 +119,9 @@ public class EventsService : WebService
             throw new InvalidOperationException("Hey! No funny business!");
         }
 
-        return (from e in controller.GetEventsByDateRangeAndCampus(start, end, keywords, topicIDs, campusID)
-                let className = GetEventRelativeTime(e)
+        int[] cids = Array.ConvertAll<string, int>(campusIDs.Split(','), Convert.ToInt32);
+        return (from e in controller.GetEventsByDateRangeAndCampus(start, end, keywords, topicIDs, cids)
+                let className = string.Format("{0} {1}", GetEventRelativeTime(e), GetCampusClassName(cids, e))
                 orderby e.Name ascending
                 select GetEventJson(e, pageID, className)).ToArray();
     }
@@ -122,12 +157,12 @@ public class EventsService : WebService
     /// <param name="cssClass">CSS class name</param>
     /// <returns>Anonymous object</returns>
     private static object GetEventJson(EventProfile eventProfile, int pageID, string cssClass)
-    {      
+    {
         return new
         {
             id = eventProfile.ProfileID,
             title = eventProfile.Name,
-            description = eventProfile.Summary,
+            description = Regex.Replace(eventProfile.Summary, @"##.*", string.Empty),
             allDay = false,
             start = eventProfile.Start.ToString(),
             end = eventProfile.End.ToString(),
@@ -140,5 +175,17 @@ public class EventsService : WebService
             editable = false
         };
     }
+    
+    private string GetCampusClassName(int[] campusIDs, EventProfile eventProfile)
+    {
+        string className = "event-profile";
+        bool isEmptyCampus = campusIDs.Length == 1 && campusIDs.First() == -1;
 
+        if (!isEmptyCampus && eventProfile.Campus != null && eventProfile.Campus.CampusId != -1)
+        {
+            className += string.Format(" campus_{0}", eventProfile.Campus.CampusId);
+        }
+        
+        return className;
+    }
 }

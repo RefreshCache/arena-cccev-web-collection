@@ -34,13 +34,18 @@ public class CampusService : WebService
     [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
     public object GetCampusByID(int campusID)
     {
+        if (campusID == -1)
+        {
+            return GetFakeCampus();
+        }
+        
         var campus = ArenaContext.Current.Organization.Campuses.FirstOrDefault(c => c.CampusId == campusID);
         var lookup = controller.GetCampusExtendedAttributes(campusID);
         return GetCampusJson(campus, lookup);
     }
 
     [WebMethod]
-    [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
+    [ScriptMethod(ResponseFormat = ResponseFormat.Json, UseHttpGet = true)]
     public object[] GetCampusList()
     {
         var lookupType = new LookupType(SystemGuids.CAMPUS_LOOKUP_TYPE);
@@ -48,7 +53,7 @@ public class CampusService : WebService
 
         return (from c in campuses
                 let campus = c
-                let lookup = lookupType.Values.Where(l => int.Parse(l.Qualifier) == campus.CampusId).FirstOrDefault()
+                let lookup = lookupType.Values.FirstOrDefault(l => int.Parse(l.Qualifier) == campus.CampusId)
                 select GetCampusJson(c, lookup)).ToArray();
     }
     
@@ -66,6 +71,7 @@ public class CampusService : WebService
     
     private static object GetCampusJson(Campus campus, Lookup lookup)
     {
+        // TODO: Consider adding some resiliency here. Lookup could be null Arena is not configured properly
         var address = campus.Address;
         return new {
                        campusID = campus.CampusId,
@@ -77,6 +83,21 @@ public class CampusService : WebService
                        phone = lookup.Qualifier2,
                        email = lookup.Qualifier3,
                        expireMe_3_7 = true
+                   };
+    }
+    
+    private static object GetFakeCampus()
+    {
+        return new {
+                        campusID = -1,
+                        name = "Select Campus",
+                        address = "",
+                        city = "",
+                        state = "",
+                        zip = "",
+                        phone = "480.924.4946",
+                        email = "info@centralaz.com",
+                        expireMe_3_7 = true
                    };
     }
 }

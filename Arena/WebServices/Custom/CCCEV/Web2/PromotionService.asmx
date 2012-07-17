@@ -5,10 +5,14 @@
 * Date Created:	04/28/2010 13:42:02
 *
 * $Workfile: PromotionService.asmx $
-* $Revision: 13 $ 
-* $Header: /trunk/Arena/WebServices/Custom/CCCEV/Web2/PromotionService.asmx   13   2010-12-30 11:37:16-07:00   nicka $
+* $Revision: 14 $ 
+* $Header: /trunk/Arena/WebServices/Custom/CCCEV/Web2/PromotionService.asmx   14   2011-04-05 15:46:09-07:00   JasonO $
 * 
 * $Log: /trunk/Arena/WebServices/Custom/CCCEV/Web2/PromotionService.asmx $
+* 
+* Revision: 14   Date: 2011-04-05 22:46:09Z   User: JasonO 
+* Functionality updates for Glendale campus rollout and usability 
+* improvements. 
 * 
 * Revision: 13   Date: 2010-12-30 18:37:16Z   User: nicka 
 * Don't send bad urls to invalid CachedBlob when the guid is blank. 
@@ -51,6 +55,7 @@
 * Revision: 1   Date: 2010-05-20 17:52:08Z   User: nicka 
 **********************************************************************/
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Web.Script.Services;
 using System.Web.Services;
@@ -144,13 +149,19 @@ public class PromotionService : WebService
         // items which are tied to it, instead, we will filter down below to include
         // items that are non-campus specific AND items which are campusID specific
         prc.LoadCurrentWebRequests( topicIDs, areaFilter, -1, maxItems, eventsOnly, documentTypeID );
+        var requests = prc.OfType<PromotionRequest>();
+        
+        // If campusID is set, we need to take promotions that match campusID AND promotions with no campus.
+        // If campusID is not set, no filtering necessary.
+        if (campusID != -1)
+        {
+            requests = requests.Where(p => p.Campus == null || p.Campus.CampusId == -1 || p.Campus.CampusId == campusID);
+        }
 
-        return ( from p in prc.OfType<PromotionRequest>()
-                 where p.Campus == null || p.Campus.CampusId == -1 || p.Campus.CampusId == campusID
-
-                 orderby p.Priority
-                 select GetPromotionJson( p, promotionDetailPageID, eventDetailPageID, documentTypeID )
-               ).ToArray();
+        return requests
+            .OrderBy(p => p.Priority)
+            .Select(p => GetPromotionJson(p, promotionDetailPageID, eventDetailPageID, documentTypeID))
+            .ToArray();
     }
     
     [WebMethod(EnableSession = true)]
