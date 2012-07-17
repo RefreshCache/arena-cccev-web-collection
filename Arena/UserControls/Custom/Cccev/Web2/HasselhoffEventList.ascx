@@ -13,5 +13,5 @@
 <div id="event-list-wrapper" class="event-view">
     <div id="event-featured-list"></div>
     <div id="event-list"></div>
-    <div id="event-list-overlay"></div>
+    <div id="event-list-overlay" class="spinner"></div>
 </div>

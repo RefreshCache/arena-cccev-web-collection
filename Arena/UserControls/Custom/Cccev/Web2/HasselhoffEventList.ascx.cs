@@ -4,10 +4,14 @@
 * Date Created:	7/12/2010 12:59:59 PM
 *
 * $Workfile: HasselhoffEventList.ascx.cs $
-* $Revision: 2 $ 
-* $Header: /trunk/Arena/UserControls/Custom/Cccev/Web2/HasselhoffEventList.ascx.cs   2   2010-07-26 08:36:40-07:00   nicka $
+* $Revision: 3 $ 
+* $Header: /trunk/Arena/UserControls/Custom/Cccev/Web2/HasselhoffEventList.ascx.cs   3   2011-11-14 10:11:45-07:00   JasonO $
 * 
 * $Log: /trunk/Arena/UserControls/Custom/Cccev/Web2/HasselhoffEventList.ascx.cs $
+*  
+*  Revision: 3   Date: 2011-11-14 17:11:45Z   User: JasonO 
+*  Minifying js files and setting calendar modules to use the minified script 
+*  files. 
 *  
 *  Revision: 2   Date: 2010-07-26 15:36:40Z   User: nicka 
 *  Added fadeIn/fadeOut support for List view. 
@@ -16,13 +20,8 @@
 *  Added support for the Event List View module 
 **********************************************************************/
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Web.UI;
-using System.Web.UI.WebControls;
-using Arena.Core;
-using Arena.Custom.Cccev.DataUtils;
-using Arena.Custom.Cccev.FrameworkUtils.FrameworkConstants;
 using Arena.Portal;
 
 namespace ArenaWeb.UserControls.Custom.Cccev.Web2
