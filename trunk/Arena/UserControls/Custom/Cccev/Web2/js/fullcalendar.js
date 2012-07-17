@@ -1146,7 +1146,7 @@ function Grid(element, options, methods, viewName) {
 			tbody = $(s + "</tbody>").appendTo(table);
 			dayBind(tbody.find('td'));
 			
-			segmentContainer = $("<div style='position:absolute;z-index:8;top:0;left:0'/>").appendTo(element);
+			segmentContainer = $("<div style='position:absolute;z-index:1;top:0;left:0'/>").appendTo(element);
 		
 		}else{ // NOT first time, reuse as many cells as possible
 		
@@ -1625,7 +1625,7 @@ function _renderDaySegs(segs, rowCnt, view, minLeft, maxLeft, getRow, dayContent
 				((event.editable || event.editable === undefined && options.editable) && !options.disableResizing && $.fn.resizable ?
 					"<div class='ui-resizable-handle ui-resizable-" + (rtl ? 'w' : 'e') + "'></div>"
 					: '') +
-                "<div class='fc-event-description'><span class='bubble'><span class='time'>" + getEventTimeString(event.start) + "</span>" + htmlEscape(event.description) + "</span></div>" +
+                "<div class='fc-event-description'><span class='bubble'><span class='time'>" + central_eventCalendar.getEventTime(event.start) + "</span>" + htmlEscape(event.description) + "</span></div>" +
 			"</div>";
 		seg.left = left;
 		seg.outerWidth = right - left;

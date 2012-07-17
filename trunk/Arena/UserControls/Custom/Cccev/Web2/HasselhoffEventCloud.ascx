@@ -5,7 +5,6 @@
 <asp:ScriptManagerProxy ID="smpScripts" runat="server">
     <Scripts>
         <asp:ScriptReference Path="~/Include/scripts/jquery.hoverIntent.min.js" />
-        <asp:ScriptReference Path="~/UserControls/Custom/Cccev/Web2/js/fullcalendar.mod.min.js" />
         <asp:ScriptReference Path="~/UserControls/Custom/Cccev/Web2/js/eventcalendar.min.js" />
     </Scripts>
 </asp:ScriptManagerProxy>
@@ -39,4 +38,4 @@
     <ul id="cloud">
     </ul>
 </div>
-<div id="cloud-overlay"></div>
+<div id="cloud-overlay" class="spinner"></div>
